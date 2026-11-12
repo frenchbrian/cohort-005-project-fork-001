@@ -39,7 +39,17 @@ export function knock() {
 export const knockUserId = (id: number) => String(id);
 
 export async function identify(u: { id: number; name: string; email: string }) {
-  await knock().users.update(knockUserId(u.id), { name: u.name, email: u.email });
+  const id = knockUserId(u.id);
+  await knock().users.update(id, { name: u.name, email: u.email });
+  // Cadence owns the default: new Enrollment is off until the user opts in.
+  // Only written when the user has no choice recorded, so an opt-in survives re-identify.
+  const prefs = await knock().users.getPreferences(id, "default");
+  if (prefs.categories?.[NEW_ENROLLMENT_CATEGORY] === undefined) {
+    await knock().users.setPreferences(id, "default", {
+      __persistence_strategy__: "merge",
+      categories: { [NEW_ENROLLMENT_CATEGORY]: { channel_types: { in_app_feed: false } } },
+    });
+  }
 }
 
 export async function tokenFor(userId: number) {

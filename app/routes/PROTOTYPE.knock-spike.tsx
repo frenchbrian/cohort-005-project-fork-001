@@ -79,7 +79,11 @@ export async function action({ request }: Route.ActionArgs) {
     }
     if (intent === "clear-prefs") {
       // Wipe the user's own set so only the environment default applies.
-      await knock().users.unsetPreferences(knockUserId(recipient.id), "default");
+      await knock()
+        .users.unsetPreferences(knockUserId(recipient.id), "default")
+        .catch((e: any) => {
+          if (e?.status !== 404) throw e; // nothing to clear yet
+        });
       return { ok: true, intent, result: "unset" };
     }
     return { ok: false, intent, result: "unknown intent" };
