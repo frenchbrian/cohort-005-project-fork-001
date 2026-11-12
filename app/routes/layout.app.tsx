@@ -171,6 +171,17 @@ function getRecentlyProgressedCourses(userId: number, limit: number = 3) {
     .all();
 }
 
+import { feedConfigFor } from "~/lib/PROTOTYPE-notification-feed.server";
+import { useFeed } from "~/components/PROTOTYPE-notification-feed/use-feed";
+import {
+  FeedContext,
+  VARIANTS,
+  VariantABell,
+  VariantBNavItem,
+  VariantCTopBar,
+} from "~/components/PROTOTYPE-notification-feed/variants";
+import { PrototypeSwitcher, useVariant } from "~/components/PROTOTYPE-variant-switcher";
+
 export async function loader({ request }: Route.LoaderArgs) {
   const users = getAllUsers();
   const currentUserId = await getCurrentUserId(request);
@@ -213,6 +224,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     countryTierInfo,
     countries: COUNTRIES,
     isTeamAdmin: currentUserId ? isTeamAdmin(currentUserId) : false,
+    feedConfig: await feedConfigFor(currentUserId ?? null), // PROTOTYPE
   };
 }
 
@@ -225,18 +237,27 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
     countryTierInfo,
     countries,
     isTeamAdmin: userIsTeamAdmin,
+    feedConfig,
   } = loaderData;
+  // PROTOTYPE: Notification Feed variants
+  const feed = useFeed(feedConfig);
+  const variant = useVariant(VARIANTS.map((v) => v.key));
 
   return (
+    <FeedContext.Provider value={feed}>
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         currentUser={currentUser}
         recentCourses={recentCourses}
         isTeamAdmin={userIsTeamAdmin}
+        headerExtra={variant === "A" ? <VariantABell /> : null}
+        navExtra={variant === "B" ? <VariantBNavItem /> : null}
       />
       <main className="flex-1 overflow-y-auto">
+        {variant === "C" && <VariantCTopBar />}
         <Outlet />
       </main>
+      <PrototypeSwitcher variants={VARIANTS} current={variant} />
       <DevUI
         users={users}
         currentUser={currentUser}
@@ -246,5 +267,6 @@ export default function AppLayout({ loaderData }: Route.ComponentProps) {
       />
       <Toaster position="bottom-right" richColors closeButton />
     </div>
+    </FeedContext.Provider>
   );
 }
